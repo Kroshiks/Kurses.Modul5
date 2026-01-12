@@ -8,7 +8,7 @@
 #include <ctype.h> 
 
 enum {LEFT=1, UP, RIGHT, DOWN, STOP_GAME='q'};
-enum {MAX_TAIL_SIZE=100, START_TAIL_SIZE=3};
+enum {MAX_TAIL_SIZE=100, START_TAIL_SIZE=15};
 
 /* Кнопки управления */
 struct control_buttons{
@@ -63,7 +63,7 @@ void initSnake(snake_t *head, size_t size, int x, int y){
 }
 
 /* Двтжение головы */
-void go(struct snake_t *head){
+_Bool go(struct snake_t *head){
 	char ch = '@';
 	mvprintw(head->y, head->x, " "); //очищаем один символ
 
@@ -90,8 +90,14 @@ void go(struct snake_t *head){
 			break;
 		default:;
 	}
+
+	for(size_t i = 0; i < head->tsize; i++)
+	{
+		if(head->x == head->tail[i].x && head->y == head->tail[i].y) return 1;	
+	}
 	
 	refresh();
+	return 0;
 }
 
 /* Движение тела относительно головы */
@@ -113,14 +119,14 @@ void goTail(struct snake_t *head){
 }
 
 /* изменение направления */
-void changeDirection(snake_t* snake, const int32_t key, const int32_t key_pred){
-	if ((key == snake->controls.down) && (key_pred != UP))
+void changeDirection(snake_t* snake, const int32_t key){
+	if (key == snake->controls.down)
 		snake->direction = DOWN;
-	else if ((key == snake->controls.up) && (key_pred != DOWN))
+	else if (key == snake->controls.up)
 		snake->direction = UP;
-	else if ((key == snake->controls.right) && (key_pred != LEFT))
+	else if (key == snake->controls.right)
 		snake->direction = RIGHT;
-	else if ((key == snake->controls.left) && (key_pred != RIGHT))
+	else if (key == snake->controls.left)
 		snake->direction = LEFT;
 }
 
@@ -136,21 +142,26 @@ int main(int argc, char **argv){
 	mvprintw(0, 0,"Use arrows for control.Press 'q' for EXIT");
 	timeout(0); //Отключаем таймаут после нажатия клавиши в цикле
 	
-	int key_pressed = 0, key_pred = 0;
-	
+	int key_pressed = 0;
+	_Bool collision = false;
 	while( key_pressed != STOP_GAME )
 	{
-		key_pred = snake->direction;
 		key_pressed = getch(); // Считываем клавишу
-		go(snake);
+		if(go(snake))
+		{
+			collision = true;
+			break;
+		}
 		goTail(snake);
 		timeout(100); // Задержка при отрисовке(Скорость движения змеи)
-		changeDirection(snake, key_pressed, key_pred);
+		changeDirection(snake, key_pressed);
 	}
 	free(snake->tail);
 	free(snake);
 	endwin();
-	// printf("ready");
+	if(collision) printf("COLLISION!!!");
+	else printf("END.");
+		
 	// Завершаем режим curses mod
 	return 0;
 }
